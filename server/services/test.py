@@ -1,0 +1,2 @@
+def mm():
+	print('kk')

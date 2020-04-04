@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package book;
+
+import "google/protobuf/empty.proto";
+
+
+message Author {
+	int32 id = 1;
+	string first_name = 2;
+	string last_name = 3;
+	string country = 4;
+}
+
+message Book {
+	int32 id = 1;
+	string name = 2;
+	int32 author_id = 3;
+	int32 year = 4;
+}
+
+message BookDetailRequest {
+	int32 id = 1;
+}
+
+message BookDeleteRequest {
+    int32 id = 1;
+}
+
+message BookUpdateRequest {
+	int32 id = 1;
+	string name = 2;
+	int32 author_id = 3;
+	int32 year = 4;
+
+}
+
+message BookListResponse {
+	repeated Book books = 1;
+}
+
+message BookListRequest {
+
+
+}
+service BookService {
+	rpc BookCreate (Book) returns (Book) {}
+	rpc BookDetail (BookDetailRequest) returns (Book) {}
+	rpc BookDelete (BookDeleteRequest) returns (google.protobuf.Empty) {}
+	rpc BookUpdate (BookUpdateRequest) returns (Book) {}
+	rpc BookList (BookListRequest) returns (BookListResponse) {}
+
+}
+

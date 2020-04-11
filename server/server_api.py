@@ -8,6 +8,10 @@ from book_grpc import BookServiceStub
 from hypercorn.asyncio import serve
 from starlette.requests import Request
 from starlette.endpoints import HTTPEndpoint 
+from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from book_pb2 import Book,BookDetailRequest,BookDeleteRequest,BookUpdateRequest,BookListRequest
 
 
@@ -43,6 +47,7 @@ async def book_list():
 class BookCreate(HTTPEndpoint):
 	async def post(self, request):
 			data = await request.json()
+			print(request.channel)
 			name = data["name"]
 			author_id = data["author_id"]
 			year = data["year"]
@@ -82,6 +87,9 @@ class BookList(HTTPEndpoint):
 
 
 
+
+
+
 routes = [
 	Route("/create/book", BookCreate),
 	Route("/book/detail/{book_id}", BookDetail),
@@ -90,5 +98,26 @@ routes = [
 	Route("/book/list", BookList)
 
 ]
-app = Starlette(routes=routes)
+
+
+class CustomerHeaderMiddleware(BaseHTTPMiddleware):
+
+	def __init__(self, app, channel):
+		super().__init__(app)
+		self.channel = channel
+
+
+	async def dispatch(self,request,call_next):
+		request.channel = self.channel
+		response = await call_next(request)
+		return response
+
+
+channel = Channel('127.0.0.1', 50051)
+book = BookServiceStub(channel)
+middleware = [
+	Middleware(CustomerHeaderMiddleware, channel=channel)
+
+]
+app = Starlette(routes=routes, middleware=middleware)
 asyncio.run(serve(app, test()))

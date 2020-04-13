@@ -68,6 +68,7 @@ class BookService(BookServiceBase):
 
 	async def BookCreate(self, stream):
 			request = await stream.recv_message()
+			print(request)
 			name = request.name
 			author_id = request.author_id
 			year = request.year

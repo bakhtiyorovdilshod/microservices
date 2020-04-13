@@ -1,0 +1,10 @@
+python = "3.7.5"
+gino = "*"
+grpclib = "*"
+grpcio-tools = "*"
+grpcio = "*"
+protobuf = "*"
+hypercorn = "*"
+starlette = "*"
+
+

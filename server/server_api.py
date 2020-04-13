@@ -16,6 +16,19 @@ from book_pb2 import Book,BookDetailRequest,BookDeleteRequest,BookUpdateRequest,
 
 
 
+class CustomerHeaderMiddleware(BaseHTTPMiddleware):
+
+	def __init__(self, app, channel=None):
+		super().__init__(app)
+		self.channel = channel
+
+
+	async def dispatch(self,request,call_next):
+		request.scope['channel'] = self.channel
+		response = await call_next(request)
+		return response
+
+
 def connect():
 	channel = Channel('127.0.0.1', 50051)
 	book = BookServiceStub(channel)
@@ -41,24 +54,34 @@ async def book_list():
 	for i in reply.books:
 		query.append(convert_to_json(i))
 	return query
-
+	
 
 
 class BookCreate(HTTPEndpoint):
 	async def post(self, request):
 			data = await request.json()
-			print(request.channel)
+			channel = request.scope['channel']
+			book = BookServiceStub(channel)
 			name = data["name"]
 			author_id = data["author_id"]
 			year = data["year"]
-			reply:Book = await connect().BookCreate(Book(name=name,year=year,author_id=author_id))
-			json_data = convert_to_json(reply)
-			return JSONResponse(json_data)
+			x = await mmm(channel, name, year, author_id)
+			# reply = await mmm(channel).BookCreate(Book(name=name,year=year,author_id=author_id))
+			return JSONResponse({'code':"404"})
+
+async def mmm(channel, name,year,author_id):
+	book = BookServiceStub(channel)
+	loop = asyncio.new_event_loop()
+	reply = loop.create_task(book.BookCreate(Book(name=name,year=year,author_id=author_id)))
+	loop.run_until_complete(asyncio.wait(asyncio.get_event_loop()))
+	return reply
+
 
 class BookDetail(HTTPEndpoint):
 	async def get(self,request):
 			book_id = request.path_params['book_id']
 			reply = await connect().BookDetail(BookDetailRequest(id=int(book_id)))
+			print(reply)
 			json_data = convert_to_json(reply)
 			return JSONResponse(json_data)
 
@@ -100,24 +123,19 @@ routes = [
 ]
 
 
-class CustomerHeaderMiddleware(BaseHTTPMiddleware):
-
-	def __init__(self, app, channel):
-		super().__init__(app)
-		self.channel = channel
-
-
-	async def dispatch(self,request,call_next):
-		request.channel = self.channel
-		response = await call_next(request)
-		return response
-
-
-channel = Channel('127.0.0.1', 50051)
+channel =Channel('127.0.0.1', 50051)
 book = BookServiceStub(channel)
+
 middleware = [
 	Middleware(CustomerHeaderMiddleware, channel=channel)
 
 ]
-app = Starlette(routes=routes, middleware=middleware)
-asyncio.run(serve(app, test()))
+
+async def main():
+	while True:
+		await serve(app, test())
+
+
+app = Starlette(debug=True, routes=routes, middleware=middleware)
+asyncio.run(main())
+asyncio.run(mmm())
